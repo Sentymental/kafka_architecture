@@ -1,0 +1,44 @@
+version: "3"
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:${CONFLUENT_VERSION}
+    depends_on:
+      - zookeeper
+    ports:
+      - ${KAFKA_PORT}: 9092
+      - ${KAFKA_LOCALHOST_PORT}: 9093
+    environment:
+      - KAFKA_BROKER_ID: 1
+      - KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      - KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,PLAINTEXT://0.0.0.0:9093
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      - KAFKA_LOG4J_ROOT_LOGLEVEL: INFO
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      - KAFKA_MESSAGE_MAX_BYTES: 10485760
+      - KAFKA_SOCKET_REQUEST_MAX_BYTES: 100001200
+    restart: always
+    volumes:
+      - ./kafka-data:/var/lib/kafka/data
+
+  zookeeper:
+    image: zookeeper:${ZK_VERSION}
+    ports:
+      - ${ZK_PORT}: 2181
+    restart: always
+    volumes:
+      - ./zk-data:/var/lib/zookeeper/data \
+      - ./zk-txn-logs:/var/lib/zookeeper/log \
+
+  db:
+
+
+  pgadmin:
+
+
+  grafana:
