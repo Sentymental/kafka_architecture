@@ -5,7 +5,6 @@ Routes for our demo server
 
 import random
 
-import metrics
 from fastapi import APIRouter
 from prometheus_client import Counter
 
