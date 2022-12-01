@@ -73,5 +73,23 @@ services:
     depends_on:
       - db
 
+  prometheus:
+    image: quay.io/prometheus/prometheus:${PROMETHEUS_VERSION}
+    ports:
+      - ${PROMETHEUS_PORT}:9090
+    volumes:
+      - ./prometheusconfig/prometheus.yml:/etc/prometheus/prometheus.yml
 
   grafana:
+    image: grafana/grafana:${GRAFANA_VERSION}
+    user: ${GRAFANA_USER}
+    restart: always
+    ports:
+      - ${GRAFANA_PORT}:3000
+    volumes:
+      - ./grafana-data/data:/var/lib/grafana
+      - ./grafana-data/certs:/certs
+      - ./01_infrastructure/grafana/provisioning:/etc/grafana/provisioning
+      - ./01_infrastructure/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
