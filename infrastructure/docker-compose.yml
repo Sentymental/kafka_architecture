@@ -6,8 +6,8 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - ${KAFKA_PORT}: 9092
-      - ${KAFKA_LOCALHOST_PORT}: 9093
+      - ${KAFKA_PORT}:9092
+      - ${KAFKA_LOCALHOST_PORT}:9093
     environment:
       - KAFKA_BROKER_ID: 1
       - KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -29,7 +29,7 @@ services:
   zookeeper:
     image: zookeeper:${ZK_VERSION}
     ports:
-      - ${ZK_PORT}: 2181
+      - ${ZK_PORT}:2181
     restart: always
     volumes:
       - ./zk-data:/var/lib/zookeeper/data \
@@ -52,9 +52,26 @@ services:
       - KAFKA_ZOOKEEPER_CONNECT: ignored
 
   db:
-
+    image: postgres:${PG_VERSION}
+    environment:
+      - POSTGRES_DB: ${DB_NAME}
+      - POSTGRES_USER: ${DB_USERNAME}
+      - POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./postgres-data:/var/lib/postgresql
+    ports:
+      - ${DB_PORT}:5432
+    restart: always
 
   pgadmin:
+    image: chorss/docker-pgadmin4
+    restart: always
+    volumes:
+      - ./pgadmin:/data
+    ports:
+      - ${PG_ADMIN_PORT}:5050
+    depends_on:
+      - db
 
 
   grafana:
