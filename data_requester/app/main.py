@@ -44,7 +44,7 @@ async def request_data() -> None:
     logger.info(f"Reveiced new pairs: {pairs}")
     if pairs:
         logger.info(f"Sending pair: {pair}")
-        kafka_producer_obj.send(KAFKA_TOPIC, pairs)
+        kafka_producer_obj.send(KAFKA_TOPIC, pairs, partitions=8)
     else:
         logger.info("There is no valid pairs or " "is the problem with producer")
 
