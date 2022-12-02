@@ -9,7 +9,7 @@ import data_provider
 import faust
 
 from fastapi import FastAPI
-from fastapi_utils import repeat_every
+from fastapi_utils.tasks import repeat_every
 from kafka import KafkaProducer
 from prometheus_client import start_http_server
 
@@ -18,11 +18,11 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)-15s | %(levelname)s | %(filename)s | %(lineno)d: %(message)s",
 )
-logger = logging.getLoger(__name__)
+logger = logging.getLogger(__name__)
 
 # KafkaProducer:
 kafka_producer_obj = KafkaProducer(
-    bootstrap_servers="127.0.0.1:9093", value_serializer=lambda x: x.encode("utf-8")
+    bootstrap_servers="127.0.0.1:9092", value_serializer=lambda x: x.encode("utf-8")
 )
 
 # Faust Application init:
@@ -33,7 +33,7 @@ app = FastAPI(
 )
 
 @app.on_event("startup")
-@repeat_every(seconds=1)
+@repeat_every(seconds=1, raise_exceptions=True)
 async def request_data() -> None:
     """Function that generates new pairs of currency"""
     logger.info("Preparing environment to start")
@@ -41,8 +41,8 @@ async def request_data() -> None:
     pairs = await message.get_pairs()
     logger.info(f"Reveiced new pairs: {pairs}")
     if pairs:
-        logger.info(f"Sending pair: {pair}")
-        kafka_producer_obj.send("src-data", key=uuid.uuid1().bytes, value=json.dumps(pairs), partitions=8)
+        logger.info(f"Sending pair: {pairs}")
+        kafka_producer_obj.send("src-data", key=uuid.uuid1().bytes, value=json.dumps(pairs))
     else:
         logger.info("There is no valid pairs or " "is the problem with producer")
 
