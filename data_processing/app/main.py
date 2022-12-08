@@ -4,11 +4,14 @@ for consume the data and providing data processing
 """
 
 import logging
+import json
 import uvicorn
+import pandas as pd
 
 from fastapi import FastAPI
 from kafka import KafkaConsumer, KafkaProducer
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import from_csv, col
 from prometheus_client import start_http_server
 
 logging.basicConfig(
@@ -40,7 +43,8 @@ read_data = spark.readStream\
     .option("startingOffsets", "latest")\
     .load()
 
-read_data_val = read_data.selectExpr("CAST(value AS STRING)", "timestamp")
+read_data_val = read_data.selectExpr("CAST(value as STRING)")
+read_data_val = read_data_val.select("value")
 
 write_stream_console = read_data_val.writeStream\
     .outputMode("append")\
