@@ -6,7 +6,6 @@ import json
 import logging
 import uuid
 import data_provider
-import faust
 
 from fastapi import FastAPI
 from fastapi_utils.tasks import repeat_every
@@ -40,14 +39,16 @@ async def request_data() -> None:
     message = data_provider.DataProvider(base_url="http://localhost:8002/pairs")
     pairs = await message.get_pairs()
     logger.info(f"Reveiced new pairs: {pairs}")
+    logger.info(f"Type of the output: {type(pairs)}")
     if pairs:
         logger.info(f"Sending pair: {pairs}")
         kafka_producer_obj.send("src-data", key=uuid.uuid1().bytes, value=json.dumps(pairs))
     else:
-        logger.info("There is no valid pairs or " "is the problem with producer")
+        logger.info("There is no valid pairs or is the problem with producer")
 
 
 @app.on_event("startup")
 async def on_started() -> None:
+    """On Startup run prometheus"""
     logger.info("Starting prometheus server")
     start_http_server(port=7003)
