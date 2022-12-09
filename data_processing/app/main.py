@@ -3,19 +3,18 @@ Data Processing microservice that will be responsible
 for consume the data and providing data processing
 """
 
-import logging
 import json
-import uvicorn
+import logging
+import uuid
 
+import uvicorn
 from fastapi import FastAPI
 from kafka import KafkaConsumer, KafkaProducer
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_csv, col, explode, split
 from prometheus_client import start_http_server
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)-15s | %(levelname)s | %(filename)s | %(lineno)d: %(message)s"
+    format="%(asctime)-15s | %(levelname)s | %(filename)s | %(lineno)d: %(message)s",
 )
 
 logger = logging.getLogger(__name__)
@@ -23,40 +22,39 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Data Processing Microservice",
     description="Data Processing Microservice Application",
-    version="0.0.1"
+    version="0.0.1",
 )
 
-# SparkSession init:
-spark = SparkSession\
-    .builder\
-    .appName("Data Processing currency prices stream")\
-    .getOrCreate()
+producer = KafkaProducer(
+    bootstrap_servers=["localhost:9092"], value_serializer=lambda x: x.encode()
+)
 
-spark.sparkContext.setLogLevel("ERROR")
+consumer = KafkaConsumer(
+    "src-data",
+    bootstrap_servers=["localhost:9092"],
+    value_deserializer=lambda message: json.loads(message.decode("utf-8")),
+)
 
-# Spark ReadStream
-read_data = spark.readStream\
-    .format("kafka")\
-    .option("kafka.bootstrap.servers", "localhost:9092")\
-    .option("subscribe", "src-data")\
-    .option("startingOffsets", "latest")\
-    .load()
 
-values = read_data.select(
-    explode(
-        split(read_data.value, ",")
-    )
-).alias("currency")
+def on_stream(stream) -> None:
+    """Function that receives data from producer and sent it to another topic"""
+    for msg in stream:
+        logger.info(f"Received a message from the producer {msg.value}")
+        get_msg_items = msg.value.items()
+        for pair_name, pair_value in get_msg_items:
+            logger.info(f"Extracted pair: {pair_name}: {pair_value}")
+            producer.send(
+                "processed-data",
+                key=uuid.uuid1().bytes,
+                value=json.dumps({pair_name: pair_value}),
+            )
+            logger.info("Message is sucessfully send to producer")
 
-read_data_val = read_data.selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)")
-#read_data_val = read_data_val.select("value")
 
-write_stream_console = read_data_val.writeStream\
-    .outputMode("append")\
-    .format("console")\
-    .option("truncate", "false")\
-    .start()\
-    .awaitTermination()
+# Need to make it diffrent way
+while True:
+    on_stream(consumer)
+
 
 @app.on_event("startup")
 async def on_started() -> None:
