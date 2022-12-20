@@ -1,3 +1,4 @@
+import os
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructField, StructType, StringType, FloatType
 import pyspark.sql.functions as func
@@ -17,7 +18,7 @@ read_data = (
     .format("kafka")
     .option("kafka.bootstrap.servers", "localhost:9092")
     .option("subscribe", "processed-data")
-    .option("startingOffsets", "latest")
+    .option("startingOffsets", "latest") # earliest if from beginning
     .load()
 )
 
@@ -38,14 +39,30 @@ info_df_fin = info_dataframe.select("sample.*", "timestamp")
 
 info_dataframe.printSchema()
 
-df = info_dataframe.select("sample.USDPLN", "sample.EURPLN")
+df = info_dataframe.select("sample.USDPLN", "sample.EURPLN", "timestamp")
 
-write_data = (
-    df
-    .writeStream
-    .outputMode("append")
-    .format("console")
-    .option("truncate", "false")
-    .start()
+# write_data = (
+#     df
+#     .writeStream
+#     .outputMode("append")
+#     .format("console")
+#     .option("truncate", "false")
+#     .start()
+#     .awaitTermination()
+# )
+
+def _write_streaming(df, epoch_id) -> None:
+    df.write\
+        .mode("append")\
+        .format("jdbc")\
+        .option("url", "jdbc:postgresql://0.0.0.0:5432/orders")\
+        .option("driver", "org.postgresql.Driver")\
+        .option("dbtable", "test_currency")\
+        .option("user", "postgres")\
+        .option("password", "root")\
+        .save()
+
+df.writeStream\
+    .foreachBatch(_write_streaming)\
+    .start()\
     .awaitTermination()
-)
